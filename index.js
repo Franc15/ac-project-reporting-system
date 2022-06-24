@@ -183,27 +183,41 @@ app.post("/api/login", (req, res) => {
 
 // create a new user
 app.post(`/api/signup`, (req, res) => {
-  const hashedPassword = bcrypt.hashSync(req.body.password, 10);
-  const query =
-    "INSERT INTO users (firstname, lastname, username, phone, password) VALUES (?, ?, ? ,?, ?)";
-  pool.query(
-    query,
-    [
-      req.body.firstname,
-      req.body.lastname,
-      req.body.username,
-      req.body.phone,
-      hashedPassword,
-    ],
-    (err, results) => {
-      if (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
+  // check if user doesn't already exist
+  const userquery = "SELECT * FROM users WHERE username=?";
+  pool.query(userquery, [req.body.username], (err, results) => {
+    if (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    } else {
+      if (results.length > 0) {
+        res.status(401).json({ error: "Username already exists" });
       } else {
-        res.json({ message: "User created successfully" });
+        // hash the password
+        const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+        const query =
+          "INSERT INTO users (firstname, lastname, username, phone, password) VALUES (?, ?, ? ,?, ?)";
+        pool.query(
+          query,
+          [
+            req.body.firstname,
+            req.body.lastname,
+            req.body.username,
+            req.body.phone,
+            hashedPassword,
+          ],
+          (err, results) => {
+            if (err) {
+              console.error(err);
+              res.status(500).json({ error: err.message });
+            } else {
+              res.json({ message: "User created successfully" });
+            }
+          }
+        );
       }
     }
-  );
+  });
 });
 
 function verifyToken(req, res, next) {
