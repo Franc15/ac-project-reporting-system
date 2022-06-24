@@ -138,8 +138,8 @@ app.get(`/api/ac/:room`, verifyToken, (req, res) => {
 
 // get user token from login
 app.post("/api/login", (req, res) => {
-  const query = "SELECT * FROM users WHERE username=? AND password=?";
-  pool.query(query, [req.body.username, req.body.password], (err, results) => {
+  const query = "SELECT * FROM users WHERE username=?";
+  pool.query(query, [req.body.username], (err, results) => {
     if (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
@@ -147,31 +147,33 @@ app.post("/api/login", (req, res) => {
       if (results.length === 0) {
         res.status(401).json({ error: "Invalid username or password" });
       } else {
-        hashed = bcrypt.hashSync(req.body.password, 10);
-        console.log(hashed);
-        bcrypt.compare(hashed, results[0].password, (err, result) => {
-          if (err) {
-            console.error(err);
-            res.status(500).json({ error: err.message });
-          } else {
-            if (result) {
-              const token = jwt.sign(
-                {
-                  username: results[0].username,
-                  id: results[0].id,
-                },
-                "thl2015",
-                { expiresIn: "1h" }
-              );
-              res.json({
-                token: token,
-                user: results[0],
-              });
+        bcrypt.compare(
+          req.body.password,
+          results[0].password,
+          (err, result) => {
+            if (err) {
+              console.error(err);
+              res.status(500).json({ error: err.message });
             } else {
-              res.status(401).json({ error: "Invalid username or password" });
+              if (result) {
+                const token = jwt.sign(
+                  {
+                    username: results[0].username,
+                    id: results[0].id,
+                  },
+                  "thl2015",
+                  { expiresIn: "1h" }
+                );
+                res.json({
+                  token: token,
+                  user: results[0],
+                });
+              } else {
+                res.status(401).json({ error: "Invalid username or password" });
+              }
             }
           }
-        });
+        );
         // const token = jwt.sign({ username: req.body.username }, "thl2015");
         // res.json({ token });
       }
